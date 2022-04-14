@@ -81,16 +81,15 @@ Slice enc_encode(Encoder *e, Frame f, int *eresult) {
   Slice payload = {0};
 
   if(e->force_key_frame == 1) {
-    info.eFrameType = videoFrameTypeI;
+    e->engine->ForceIntraFrame(true);
     e->force_key_frame = 0;
   }
 
   pic.iPicWidth = f.width;
   pic.iPicHeight = f.height;
   pic.iColorFormat = videoFormatI420;
-  // We always received I420 format
-  pic.iStride[0] = pic.iPicWidth;
-  pic.iStride[1] = pic.iStride[2] = pic.iPicWidth / 2;
+  pic.iStride[0] = f.ystride;
+  pic.iStride[1] = pic.iStride[2] = f.cstride;
   pic.pData[0] = (unsigned char *)f.y;
   pic.pData[1] = (unsigned char *)f.u;
   pic.pData[2] = (unsigned char *)f.v;
