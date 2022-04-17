@@ -17,6 +17,7 @@ import (
 type CodecSelector struct {
 	videoEncoders []codec.VideoEncoderBuilder
 	audioEncoders []codec.AudioEncoderBuilder
+	ReadCloser    codec.ReadCloser
 }
 
 // CodecSelectorOption is a type for specifying CodecSelector options
@@ -61,7 +62,6 @@ func (selector *CodecSelector) Populate(setting *webrtc.MediaEngine) {
 // selectVideoCodecByNames selects a single codec that can be built and matched. codecNames can be formatted as "video/<codecName>" or "<codecName>"
 func (selector *CodecSelector) selectVideoCodecByNames(reader video.Reader, inputProp prop.Media, codecNames ...string) (codec.ReadCloser, *codec.RTPCodec, error) {
 	var selectedEncoder codec.VideoEncoderBuilder
-	var encodedReader codec.ReadCloser
 	var errReasons []string
 	var err error
 
@@ -71,7 +71,7 @@ outer:
 		for _, encoder := range selector.videoEncoders {
 			// MimeType is formated as "video/<codecName>"
 			if strings.HasSuffix(strings.ToLower(encoder.RTPCodec().MimeType), wantCodecLower) {
-				encodedReader, err = encoder.BuildVideoEncoder(reader, inputProp)
+				selector.ReadCloser, err = encoder.BuildVideoEncoder(reader, inputProp)
 				if err == nil {
 					selectedEncoder = encoder
 					break outer
@@ -86,7 +86,7 @@ outer:
 		return nil, nil, errors.New(strings.Join(errReasons, "\n\n"))
 	}
 
-	return encodedReader, selectedEncoder.RTPCodec(), nil
+	return selector.ReadCloser, selectedEncoder.RTPCodec(), nil
 }
 
 func (selector *CodecSelector) selectVideoCodec(reader video.Reader, inputProp prop.Media, codecs ...webrtc.RTPCodecParameters) (codec.ReadCloser, *codec.RTPCodec, error) {
